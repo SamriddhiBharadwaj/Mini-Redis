@@ -1,4 +1,13 @@
-import "bufio"
+package parser
+
+import (
+	"bufio"
+	"errors"
+	"log"
+	"miniredis/internal/command"
+	"net"
+	"strconv"
+)
 
 // Parser contains the logic to read from a raw tcp connection and parse commands.
 // Raw TCP bytes → Buffered Reader → Line parsing → Command parsing
@@ -9,13 +18,6 @@ type Parser struct {
 	line []byte
 	pos  int
 }
-
-// Command implements the behavior of the commands.
-type Command struct {
-	args []string
-	conn net.Conn
-}
-
 
 // NewParser returns a new Parser that reads from the given connection.
 // wraps connection with a buffer
@@ -29,7 +31,6 @@ func NewParser(conn net.Conn) *Parser {
 }
 
 // helper functions for inline command parsing
-
 
 // returns current char or eof ('\r')
 func (p *Parser) current() byte {
@@ -49,7 +50,6 @@ func (p *Parser) atEnd() bool {
 	return p.pos >= len(p.line)
 }
 
-
 func (p *Parser) readLine() ([]byte, error) {
 	// reads till '\r'
 	line, err := p.r.ReadBytes('\r')
@@ -64,12 +64,11 @@ func (p *Parser) readLine() ([]byte, error) {
 	return line[:len(line)-1], nil
 }
 
-
 // command parses and returns a Command.
-func (p *Parser) command() (Command, error) {
+func (p *Parser) Command() (command.Command, error) {
 	b, err := p.r.ReadByte()
 	if err != nil {
-		return Command{}, err
+		return command.Command{}, err
 	}
 	// if first char is '*', handle via RESP
 	if b == '*' {
@@ -80,7 +79,7 @@ func (p *Parser) command() (Command, error) {
 		// since first char is already read, read rest of line from buffer
 		line, err := p.readLine()
 		if err != nil {
-			return Command{}, err
+			return command.Command{}, err
 		}
 		p.pos = 0
 		// append first char b to line
@@ -92,16 +91,15 @@ func (p *Parser) command() (Command, error) {
 	}
 }
 
-
 // inline parses an inline message and returns a Command. Returns an error when there's
 // a problem reading from the connection or parsing the command.
-func (p *Parser) inline() (Command, error) {
+func (p *Parser) inline() (command.Command, error) {
 	// skip initial whitespace if any
 	for p.current() == ' ' {
 		p.advance()
 	}
 	// initialize cmd to Command object and set conn to parser's conn
-	cmd := Command{conn: p.conn}
+	cmd := command.Command{Conn: p.conn}
 	// extract till eol
 	for !p.atEnd() {
 		arg, err := p.consumeArg()
@@ -109,7 +107,7 @@ func (p *Parser) inline() (Command, error) {
 			return cmd, err
 		}
 		if arg != "" {
-			cmd.args = append(cmd.args, arg)
+			cmd.Args = append(cmd.Args, arg)
 		}
 	}
 	return cmd, nil
@@ -159,10 +157,10 @@ func (p *Parser) consumeString() (s []byte, err error) {
 	return
 }
 
-//respArray parses a RESP array and returns a Command. Returns an error when there's
+// respArray parses a RESP array and returns a Command. Returns an error when there's
 // a problem reading from the connection.
-func (p *Parser) respArray() (Command, error) {
-	cmd := Command{}
+func (p *Parser) respArray() (command.Command, error) {
+	cmd := command.Command{}
 	elementsStr, err := p.readLine()
 	if err != nil {
 		return cmd, err
@@ -184,7 +182,7 @@ func (p *Parser) respArray() (Command, error) {
 			if err != nil {
 				return cmd, err
 			}
-			cmd.args = append(cmd.args, string(arg))
+			cmd.Args = append(cmd.Args, string(arg))
 		// bulk string: $5\r\nhello\r\n
 		case '$':
 			arg, err := p.readLine()
@@ -200,11 +198,11 @@ func (p *Parser) respArray() (Command, error) {
 				if err != nil {
 					return cmd, err
 				}
-				// append to buffer 
+				// append to buffer
 				text = append(text, line...)
 			}
 			// trim to exact length append buffer to Command struct object
-			cmd.args = append(cmd.args, string(text[:length]))
+			cmd.Args = append(cmd.Args, string(text[:length]))
 		// nested array
 		case '*':
 			// recursive call
@@ -212,8 +210,8 @@ func (p *Parser) respArray() (Command, error) {
 			if err != nil {
 				return cmd, err
 			}
-			cmd.args = append(cmd.args, next.args...)
+			cmd.Args = append(cmd.Args, next.Args...)
 		}
 	}
 	return cmd, nil
-} 
+}

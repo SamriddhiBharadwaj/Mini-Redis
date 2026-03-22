@@ -1,4 +1,10 @@
-import "net"
+package server
+
+import (
+	"log"
+	"miniredis/internal/parser"
+	"net"
+)
 
 // startSession handles the client's session. Parses and executes commands and writes
 // responses back to the client.
@@ -18,10 +24,10 @@ func startSession(conn net.Conn) {
 	}()
 
 	//initialize parser
-	p := NewParser(conn)
+	p := parser.NewParser(conn)
 	for {
 		//continuously reads from client
-		cmd, err := p.command()
+		cmd, err := p.Command()
 
 		//returns "-ERR" incase of parsing failure
 		if err != nil {
@@ -31,7 +37,7 @@ func startSession(conn net.Conn) {
 		}
 
 		//if cmd (get, set etc) return false, session ends
-		if !cmd.handle() {
+		if !cmd.Handle() {
 			break
 		}
 	}

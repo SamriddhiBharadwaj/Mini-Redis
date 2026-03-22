@@ -1,4 +1,9 @@
-import "net"
+package server
+
+import (
+	"log"
+	"net"
+)
 
 func Start(port string) {
 	//bind program to port and start accepting clients
