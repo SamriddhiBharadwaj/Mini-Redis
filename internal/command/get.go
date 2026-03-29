@@ -16,7 +16,11 @@ func (cmd Command) get() bool {
 		return true
 	}
 	log.Println("Handle GET")
-	val, _ := cache.Get(cmd.Args[1])
+	val, ok := cache.Get(cmd.Args[1])
+	if !ok {
+		cmd.Conn.Write([]uint8("$-1\r\n"))
+		return true
+	}
 	// check if value of map is not nil for given key
 	if val != nil {
 		// typecast val to string

@@ -12,7 +12,10 @@ import (
 // setExpiration Handles expiration when passed as part of the 'set' command.
 func (cmd Command) setExpiration(pos int) error {
 	option := strings.ToUpper(cmd.Args[pos])
-	value, _ := strconv.Atoi(cmd.Args[pos+1])
+	value, err := strconv.Atoi(cmd.Args[pos+1])
+	if err != nil {
+		return fmt.Errorf("invalid expiration value")
+	}
 	// create a time object
 	var duration time.Duration
 	switch option {
@@ -25,11 +28,7 @@ func (cmd Command) setExpiration(pos int) error {
 	default:
 		return fmt.Errorf("expiration option is not valid")
 	}
-	go func() {
-		// continuously poll via subroutine
-		log.Printf("Handling '%s', sleeping for %v\n", option, duration)
-		time.Sleep(duration)
-		cache.Delete(cmd.Args[1])
-	}()
+	log.Printf("Handling '%s'", option)
+	cache.SetWithExpiration(cmd.Args[1], cmd.Args[2], duration)
 	return nil
 }
