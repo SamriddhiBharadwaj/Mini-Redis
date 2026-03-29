@@ -10,21 +10,28 @@ import (
 
 // get Fetches a key from the cache if exists.
 func (cmd Command) get() bool {
+	// check correct no of arguments
 	if len(cmd.Args) != 2 {
 		cmd.Conn.Write([]uint8("-ERR wrong number of arguments for '" + cmd.Args[0] + "' command\r\n"))
 		return true
 	}
 	log.Println("Handle GET")
 	val, _ := cache.Get(cmd.Args[1])
+	// check if value of map is not nil for given key
 	if val != nil {
+		// typecast val to string
 		res, _ := val.(string)
+		// handle quoted strings
 		if strings.HasPrefix(res, "\"") {
 			res, _ = strconv.Unquote(res)
 		}
+		// length for debugging
 		log.Println("Response length", len(res))
+		// send RESP head (eg: $5\r\n)
 		cmd.Conn.Write([]uint8(fmt.Sprintf("$%d\r\n", len(res))))
+		// convert data to bytes, add newline and send result
 		cmd.Conn.Write(append([]uint8(res), []uint8("\r\n")...))
-	} else {
+	} else { // error case
 		cmd.Conn.Write([]uint8("$-1\r\n"))
 	}
 	return true
