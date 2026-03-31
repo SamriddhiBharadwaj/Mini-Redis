@@ -21,22 +21,17 @@ func (cmd Command) get() bool {
 		cmd.Conn.Write([]uint8("$-1\r\n"))
 		return true
 	}
-	// check if value of map is not nil for given key
-	if val != nil {
-		// typecast val to string
-		res, _ := val.(string)
-		// handle quoted strings
-		if strings.HasPrefix(res, "\"") {
-			res, _ = strconv.Unquote(res)
-		}
-		// length for debugging
-		log.Println("Response length", len(res))
-		// send RESP head (eg: $5\r\n)
-		cmd.Conn.Write([]uint8(fmt.Sprintf("$%d\r\n", len(res))))
-		// convert data to bytes, add newline and send result
-		cmd.Conn.Write(append([]uint8(res), []uint8("\r\n")...))
-	} else { // error case
-		cmd.Conn.Write([]uint8("$-1\r\n"))
+
+	// handle quoted strings
+	if strings.HasPrefix(val, "\"") {
+		val, _ = strconv.Unquote(val)
 	}
+	// length for debugging
+	log.Println("Response length", len(val))
+	// send RESP head (eg: $5\r\n)
+	cmd.Conn.Write([]uint8(fmt.Sprintf("$%d\r\n", len(val))))
+	// convert data to bytes, add newline and send result
+	cmd.Conn.Write(append([]uint8(val), []uint8("\r\n")...))
+
 	return true
 }

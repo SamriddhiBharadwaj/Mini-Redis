@@ -9,12 +9,12 @@ func Set(key, value string) {
 	store.Store(key, value)
 }
 
-func Get(key string) (any, bool) {
+func Get(key string) (string, bool) {
 	val, ok := store.Load(key)
 	if !ok {
 		return "", false
 	}
-	return val, true
+	return val.(string), true
 }
 
 func Delete(key string) bool {

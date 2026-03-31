@@ -25,6 +25,10 @@ func (cmd Command) Handle() bool {
 		return cmd.quit()
 	case "TTL":
 		return cmd.ttl()
+	case "INCR":
+		return cmd.incr()
+	case "DECR":
+		return cmd.decr()
 	default:
 		log.Println("Command not supported", cmd.Args[0])
 		cmd.Conn.Write([]uint8("-ERR unknown command '" + cmd.Args[0] + "'\r\n"))

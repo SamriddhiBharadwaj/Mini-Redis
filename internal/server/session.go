@@ -33,7 +33,7 @@ func startSession(conn net.Conn) {
 		if err != nil {
 			log.Println("Error", err)
 			conn.Write([]uint8("-ERR " + err.Error() + "\r\n"))
-			break
+			continue
 		}
 
 		//if cmd (get, set etc) return false, session ends
