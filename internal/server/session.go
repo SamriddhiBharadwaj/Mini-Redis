@@ -1,6 +1,7 @@
 package server
 
 import (
+	"io"
 	"log"
 	"miniredis/internal/parser"
 	"net"
@@ -31,6 +32,10 @@ func startSession(conn net.Conn) {
 
 		//returns "-ERR" incase of parsing failure
 		if err != nil {
+			// handle EOF error during disconnecting client in pubsub
+			if err == io.EOF {
+				log.Println("Client disconnected:", conn.RemoteAddr())
+			}
 			log.Println("Error", err)
 			conn.Write([]uint8("-ERR " + err.Error() + "\r\n"))
 			continue
